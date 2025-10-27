@@ -58,24 +58,31 @@ p(X_1^{0:K}, X_2^{0:K}) = p(X_1^K, X_2^K) \prod_{i \in \tau} p(T_{i-1} | T_i), \
 
 where $T_i = (X_1^{K_i}, X_2^{K_i})$, $T_0 = (X_1^0, X_2^0)$, $T_K = (X_1^K, X_2^K)$.
 
-Traj$(2, K)$ is the set of all trajectories on a 2-dimensional cube with $K$ delimiters. From 0 vertex to the opposite vertex.
+Traj$(2, K)$ is the set of all trajectories on a 2-dimensional cube with $K$ delimiters. From 0 vertex to the opposite vertex. Note that we can construct the joint distribution in any order according to the denoising trajectories we allow, and we can assign any probability distribution over these trajectories. This flexibility allows us to model different generative processes by choosing different trajectory distributions. In the general case beyond the 2-frame example, we would replace 2 with $n$ to get Traj$(n, K)$, representing trajectories on an $n$-dimensional cube.
 
 \begin{align}
-= \mathbb{E}_{X_1^{0:K}, X_2^{0:K}} \left[ \ln p(X_1^K, X_2^K) + \sum_{i \in \text{Traj}(2,K)} \ln \left( \frac{p(T_{i-1} | T_i)}{q(T_{i-1} | T_i)} \right) \right]
+= \mathbb{E}_{X_1^{0:K}, X_2^{0:K}} \left[ \ln p(X_1^K, X_2^K) + \sum_{i \in \text{Traj}(2,K)} \ln \left( \frac{p(T_{i-1} | T_i)}{q(T_i | T_{i-1})} \right) \right]
 \end{align}
 
 \begin{align}
-= \mathbb{E}_{X_1^{0:K}, X_2^{0:K}} \left[ \ln p(X_1^K, X_2^K) \right] + \sum_{i \in \text{Traj}(2,K)} \mathbb{E}_{T_{i-1}, T_i} \left[ \ln \left( \frac{p(T_{i-1} | T_i)}{q(T_{i-1} | T_i) \cdot q(T_i)} \right) \right]
+= \mathbb{E}_{X_1^{0:K}, X_2^{0:K}} \left[ \ln p(X_1^K, X_2^K) \right] + \sum_{i \in \text{Traj}(2,K)} \mathbb{E}_{T_{i-1}, T_i} \left[ \ln \left( \frac{p(T_{i-1} | T_i) \cdot q(T_{i-1})}{q(T_{i-1} | T_i) \cdot q(T_i)} \right) \right]
 \end{align}
 
 We take all constants w.r.t $p$ out:
 \begin{align}
-= \mathbb{E}_{X_1^K, X_2^K} \left[ \ln p(X_1^K, X_2^K) \right] + \sum_{i \in \text{Traj}(2,K)} \mathbb{E}_{T_{i-1}, T_i} \left[ \ln \left( \frac{p(T_{i-1} | T_i)}{q(T_{i-1} | T_i)} \right) \right]
+\mathbb{E}_{X_1^K, X_2^K} \left[ \ln p(X_1^K, X_2^K) \right] + \sum_{i \in \text{Traj}(2,K)} \mathbb{E}_{T_{i-1}, T_i} \left[ \ln \left( \frac{p(T_{i-1} | T_i)}{q(T_{i-1} | T_i)} \right) \right]
 \end{align}
 
 \begin{align}
-= \mathbb{E}_{X_1^K, X_2^K} \left[ \ln p(X_1^K, X_2^K) \right] + \sum_{i \in \text{Traj}(2,K)} D_{KL}(q(T_{i-1} | T_i) || p(T_{i-1} | T_i))
+= \mathbb{E}_{X_1^K, X_2^K} \left[ \ln p(X_1^K, X_2^K) \right] - \sum_{i \in \text{Traj}(2,K)} D_{KL}(q(T_{i-1} | T_i) || p(T_{i-1} | T_i))
 \end{align}
+
+Note that $q(X_1^K, X_2^K) = p(X_1^K, X_2^K) = \mathcal{N}(0, I)$, and our model parameters typically do not change $p(X_1^K, X_2^K)$, so we can discard the first term. This gives us a simple sum of KL divergences over trajectories sampled from our trajectory distribution:
+\begin{align}
+\mathcal{L} = -\sum_{\tau \sim \text{Traj}(2,K)} \sum_{i \in \tau} D_{KL}(q(T_{i-1} | T_i) || p(T_{i-1} | T_i))
+\end{align}
+
+The probabilities assigned to each trajectory should correspond to the importance of each trajectory when sampling from the model.
 
 We create indicator indicating if $X_1^{K_1}, X_2^{K_2} \leftrightarrow X_1^{K_1'}, X_2^{K_2'}$ is included in the trajectories of interest.
 
