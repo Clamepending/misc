@@ -1,0 +1,172 @@
+\documentclass{article}
+\usepackage{amsmath, amsfonts, amssymb}
+\usepackage{bm}
+
+\title{KL Comparison with Forward Process and Pushforward Weighting}
+\author{Mark Ogata}
+\date{October 2025}
+
+\begin{document}
+\maketitle
+
+\section{Aligned Parameter-Gradient Forms with Forward Process and Noise Averaging}
+
+We compare the parameter derivatives of the \textbf{forward KL}, \textbf{reverse KL}, and our \textbf{pushforward score} objective
+under a forward diffusion process $F(x,t)$ and noise-level expectation $\mathbb{E}_t$ (which is exactly the procedure we use to compute DMD loss in practice).
+
+\subsection*{Forward KL}
+\begin{align*}
+\mathbb{E}_{t}\!\Big[
+  D_{\mathrm{KL}}(p_{\mathrm{fake}}\Vert p_{\mathrm{real}})
+\Big]
+&= 
+\mathbb{E}_{t}\!\left[
+  \int p_{\mathrm{fake}}(x)
+  \big(\log p_{\mathrm{fake}}(x) - \log p_{\mathrm{real}}(x)\big)\,dx
+\right] \\[2mm]
+\Rightarrow\quad
+\frac{d}{d\theta}
+\mathbb{E}_{t}\!\Big[D_{\mathrm{KL}}(p_{\mathrm{fake}}\Vert p_{\mathrm{real}})\Big]
+&= 
+\mathbb{E}_{t}\!\left[
+  \int 
+  \underbrace{p_{\mathrm{fake}}(x)}_{\text{marginal}}
+  \underbrace{(s_{\mathrm{fake}}(F(x,t),t) - s_{\mathrm{real}}(F(x,t),t))}_{\text{score diff}}
+  \frac{dG_\theta(x_t)}{d\theta}\,dx
+\right].
+\end{align*}
+
+\subsection*{Reverse KL}
+\begin{align*}
+\mathbb{E}_{t}\!\Big[
+  D_{\mathrm{KL}}(p_{\mathrm{real}}\Vert p_{\mathrm{fake}})
+\Big]
+&= 
+\mathbb{E}_{t}\!\left[
+  \int p_{\mathrm{real}}(x)
+  \big(\log p_{\mathrm{real}}(x) - \log p_{\mathrm{fake}}(x)\big)\,dx
+\right] \\[2mm]
+\Rightarrow\quad
+\frac{d}{d\theta}
+\mathbb{E}_{t}\!\Big[D_{\mathrm{KL}}(p_{\mathrm{real}}\Vert p_{\mathrm{fake}})\Big]
+&= 
+\mathbb{E}_{t}\!\left[
+  \int
+  \underbrace{p_{\mathrm{real}}(x)}_{\text{marginal}}
+  \underbrace{(s_{\mathrm{real}}(F(x,t),t) - s_{\mathrm{fake}}(F(x,t),t))}_{\text{score diff}}
+  \frac{dG_\theta(x_t)}{d\theta}\,dx
+\right].
+\end{align*}
+
+\subsection*{Our Objective}
+\begin{align*}
+\frac{d}{d\theta} L_{\mathrm{ours}}
+&= 
+-\,\mathbb{E}_{t}\!\left[
+  \int 
+  \underbrace{r(x)}_{\text{weight}}
+  \underbrace{(s_{\mathrm{real}}(F(x,t),t) - s_{\mathrm{fake}}(F(x,t),t))}_{\text{score diff}}
+  \frac{dG_\theta(x_t)}{d\theta}\,dx
+\right].
+\end{align*}
+
+\subsection*{Comparison Table}
+\begin{center}
+\begin{tabular}{lccc}
+\hline
+ & Marginal / Weight & Score difference & Outer expectation \\ \hline
+Forward KL & $p_{\mathrm{fake}}(x)$ & $(s_{\mathrm{fake}} - s_{\mathrm{real}})$ & $\mathbb{E}_{t}$ \\
+Reverse KL & $p_{\mathrm{real}}(x)$ & $(s_{\mathrm{real}} - s_{\mathrm{fake}})$ & $\mathbb{E}_{t}$ \\
+Ours & $r(x)$ & $(s_{\mathrm{real}} - s_{\mathrm{fake}})$ & $\mathbb{E}_{t}$ \\ \hline
+\end{tabular}
+\end{center}
+
+\noindent
+Thus, our objective shares the same \textbf{score difference} pattern as the reverse KL,
+but is evaluated under a different \textbf{marginal weighting} $r(x)$.
+
+
+
+
+
+
+\section{Why the Pushforward $r$ is Not a Linear Combination of $p_{\text{data}}$ or $p_\theta$}
+
+We recall the definition of the pushforward weighting:
+\[
+r(x)
+  = \int p_\theta(x \mid x_t)\, q(x_t \mid x_0)\, p_{\text{data}}(x_0)\, dx_t\, dx_0.
+\]
+It mixes samples by first drawing $x_0 \sim p_{\text{data}}$, then diffusing to $x_t \sim q(x_t \mid x_0)$,
+and finally partially denoising via $p_\theta(x \mid x_t)$.
+
+We ask: could this mixture be written as a simple convex combination
+\[
+r(x) \stackrel{?}{=} \alpha\,p_{\text{data}}(x) + (1-\alpha)\,p_\theta(x),
+\quad \text{for some } \alpha \in [0,1]?
+\]
+
+\subsection*{Step 1: What $r$ really is}
+The integrand shows that $r$ is a \textbf{mixture over many conditionals} $p_\theta(x \mid x_t)$,
+each weighted by how likely $x_t$ is under diffused data $q(x_t \mid x_0)p_{\text{data}}(x_0)$.
+Explicitly,
+\[
+r(x)
+= \int w(x_t)\, p_\theta(x \mid x_t)\, dx_t,
+\quad\text{where}\quad
+w(x_t) = \int q(x_t \mid x_0)\, p_{\text{data}}(x_0)\, dx_0.
+\]
+Thus, $r$ is an average of \emph{different shapes of the model conditional}, each corresponding to a different noise level or latent $x_t$.
+
+\subsection*{Step 2: Why this is not a linear combination of marginals}
+The key difference is that a convex combination of $p_{\text{data}}$ and $p_\theta$,
+\[
+\alpha\,p_{\text{data}}(x) + (1-\alpha)\,p_\theta(x),
+\]
+is a mixture of only \emph{two fixed distributions}, each with a fixed shape in $x$.
+
+In contrast, $r(x)$ integrates infinitely many \emph{varying} distributions
+$p_\theta(x \mid x_t)$, whose means, variances, or even supports change with $x_t$.
+Formally, unless all $p_\theta(x \mid x_t)$ share the same functional form as $p_\theta(x)$,
+the mixture
+\[
+r(x) = \int w(x_t)\, p_\theta(x \mid x_t)\, dx_t
+\]
+cannot be represented as a single affine combination of two fixed distributions in $x$.
+
+\subsection*{Step 3: Simple example (Gaussian case)}
+Suppose
+\[
+q(x_t \mid x_0) = \mathcal{N}(x_t; x_0, \sigma_t^2 I),
+\quad
+p_\theta(x \mid x_t) = \mathcal{N}(x; \mu_\theta(x_t), \Sigma_t).
+\]
+Then $r(x)$ is a Gaussian mixture:
+\[
+r(x) = \int w(x_t)\, \mathcal{N}(x; \mu_\theta(x_t), \Sigma_t)\, dx_t.
+\]
+Unless $\mu_\theta(x_t)$ is constant (so all components are identical),
+the result is a \emph{mixture of Gaussians with different means}, not a single Gaussian shape.
+Therefore, $r$ cannot equal any convex combination of two fixed densities
+$p_{\text{data}}$ and $p_\theta$—its shape has higher-order variability.
+
+\subsection*{Step 4: When equality can hold}
+Equality could only occur in degenerate situations:
+\begin{itemize}
+  \item If $p_\theta(x \mid x_t) = p_\theta(x)$ for all $x_t$, then $r(x) = p_\theta(x)$.
+  \item If $p_\theta(x \mid x_t) = \delta(x - x_0)$ (perfect reconstruction), then $r(x) = p_{\text{data}}(x)$.
+  \item If $p_{\text{data}} = p_\theta$, then all distributions coincide.
+\end{itemize}
+
+\subsection*{Conclusion}
+In general,
+\[
+r(x) \;\neq\; \alpha\,p_{\text{data}}(x) + (1-\alpha)\,p_\theta(x),
+\]
+because $r$ is not built from two fixed shapes—it is the \emph{pushforward mixture} of $p_{\text{data}}$
+through the joint stochastic map $(x_0 \!\to\! x_t \!\to\! x)$,
+producing a distribution with structure that lies strictly between $p_{\text{data}}$ and $p_\theta$,
+but not on their linear span. Since integration is a linear operation, this means we can not write our loss as a linear combination of the forward and backward KL divergences
+
+
+\end{document}
