@@ -7,6 +7,9 @@
 \geometry{margin=1in}
 
 \DeclareMathOperator*{\argmax}{arg\,max}
+% Add this next to your \argmax line
+\DeclareMathOperator*{\argmin}{arg\,min}
+
 
 \title{Deriving DT Loss with Simple Example}
 \author{}
@@ -15,7 +18,7 @@
 \begin{document}
 \maketitle
 
-\section{Setup}
+\section{Simple 2 Frame Setup}
 Let's derive DT loss with simple example:
 
 We have a two frame video: $X_1, X_2$
@@ -25,7 +28,9 @@ $K \sim \text{Uniform}(0, K)$ where 0 is no noise, $K$ is full.
 
 So $X_1^{K_1}, X_2^{K_2}$ are the two frames with their noise levels $K_1, K_2$ respectively.
 
-\section{Objective}
+\section{Diffusion Forcing Objective}
+We derive a more general view of diffusion forcing objective by deriving the ELBO for the 2 frame case.
+
 Let us define our goal:
 \begin{align}
 \argmax_\theta \mathbb{E}_{X_1^0, X_2^0 \sim p_{\text{data}}} \left[ \ln(p_\theta(X_1^0, X_2^0)) \right]
@@ -233,6 +238,9 @@ i.e. pick any frame $i$, every frame to the left should be clean, every frame to
 
 \section{Deriving the Self-Forcing Objective and Training Algorithm}
 
+Similarly, we can derive a more general view of self forcin with DMD by deriving the ELBO for the 2 frame case.
+
+
 Let's derive the self-forcing objective and training algorithm from the following:
 
 Instead of $\argmax_\theta \mathbb{E}_{X \sim p_{\text{data}}} \left[ \ln(p_\theta(X)) \right]$,
@@ -253,5 +261,136 @@ we swap $p_{\text{data}}$ and $p_\theta$ to get:
 \begin{align}
 \geq \argmax_\theta \mathbb{E}_{X_1^{0:K}, X_2^{0:K} \sim p_\theta} \left[ \ln \left( \frac{p_{\text{data}}(X_1^{0:K}, X_2^{0:K})}{p_\theta(X_1^{1:K}, X_2^{1:K} | X_1^0, X_2^0)} \right) \right]
 \end{align}
+
+From the inequality above we proceed by factorizing both the model and
+data joints along allowed denoising trajectories
+$\tau \in \mathrm{Traj}(2,K)$:
+\begin{align}
+p_\theta(X_1^{0:K},X_2^{0:K})
+  &= p_\theta(X_1^K,X_2^K)\prod_{T_i\in\tau} p_\theta(T_{i-1}\mid T_i),\\
+p_{\text{data}}(X_1^{0:K},X_2^{0:K})
+  &= p_{\text{data}}(X_1^K,X_2^K)\prod_{T_i\in\tau} p_{\text{data}}(T_{i-1}\mid T_i),
+\end{align}
+where $T_0=(X_1^0,X_2^0)$ and $T_K=(X_1^K,X_2^K)$.
+
+Plugging these factorizations into the ELBO form and collecting the terms
+that depend on~$\theta$ gives
+\begin{align}
+\argmax_\theta\;
+\mathbb{E}_{X_1^{0:K},X_2^{0:K}\sim p_\theta}
+\left[
+  \ln p_\theta(X_1^0,X_2^0)
+  + \sum_{T_i \rightarrow T_{i-1} \in\mathrm{Traj}(2,K)}
+    \ln\!\left(
+      \frac{p_{\text{data}}(T_{i-1}\mid T_i)}
+           {p_\theta(T_{i-1}\mid T_i)}
+    \right)
+\right].
+\end{align}
+Separating expectations yields
+\begin{align}
+= \underbrace{\mathbb{E}_{X_1^0,X_2^0\sim p_\theta}[\ln p_\theta(X_1^0,X_2^0)]}_{-\,H(p_\theta(X_1^0,X_2^0))}
+\;-\;
+\sum_{T_i \rightarrow T_{i-1} \in\mathrm{Traj}(2,K)}
+D_{\mathrm{KL}}\!\left(p_\theta(T_{i-1}\mid T_i)\,\big\|\,p_{\text{data}}(T_{i-1}\mid T_i)\right)
+\\
+\qquad\qquad
++\; \underbrace{ \ln\frac{p_{\text{data}}(X_1^K,X_2^K)}{p_\theta(X_1^K,X_2^K)} }_{\text{independent of }\theta\text{ when }X^K\sim\mathcal N(0,I)\text{ for data and model}} .
+\end{align}
+
+\paragraph{Forward terminal state.}
+We assume a Gaussian forward noising kernel so that the terminal
+distribution is fixed to standard normal:
+\begin{align}
+p_\theta(X_1^K,X_2^K)=p_{\text{data}}(X_1^K,X_2^K)=\mathcal N(0,I).
+\end{align}
+Hence the terminal-state KL is zero and does not affect optimization.
+
+\paragraph{Equivalent minimization problem.}
+Maximizing the display above is equivalent to minimizing the positive
+terms:
+\begin{align}
+\argmin_\theta\;
+H\!\left(p_\theta\right)
++\sum_{T_i \rightarrow T_{i-1} \in\mathrm{Traj}(2,K)}
+D_{\mathrm{KL}}\!\left(p_\theta(T_{i-1}\mid T_i)\,\big\|\,p_{\text{data}}(T_{i-1}\mid T_i)\right).
+\label{eq:entropy-plus-trajectory-kls}
+\end{align}
+
+Averaging over trajectories drawn from any prior over paths
+$\tau\sim\mathrm{Traj}(2,K)$ gives the equivalent expectation form:
+\begin{align}
+\argmin_\theta\;
+H\!\left(p_\theta\right)
++
+\mathbb{E}_{\tau\sim\mathrm{Traj}(2,K)}
+\left[
+\sum_{T_i \rightarrow T_{i-1} \in \tau}
+D_{\mathrm{KL}}\!\left(
+p_\theta(T_{i-1}\mid T_i)\,\big\|\,p_{\text{data}}(T_{i-1}\mid T_i)
+\right)
+\right].
+\end{align}
+
+\paragraph{Connection to DMD.}
+Define the \emph{distribution matching distillation} objective
+\[
+\mathcal L_{\mathrm{DMD}}
+:=\mathbb{E}_{\tau\sim\mathrm{Traj}(2,K)}
+\left[
+\sum_{T_i \rightarrow T_{i-1} \in \tau}
+D_{\mathrm{KL}}\!\left(
+p_\theta(T_{i-1}\mid T_i)\,\big\|\,p_{\text{data}}(T_{i-1}\mid T_i)
+\right)
+\right].
+\]
+Then \eqref{eq:entropy-plus-trajectory-kls} becomes simply
+\begin{align}
+\argmin_\theta\; H\!\left(p_\theta\right)+\mathcal L_{\mathrm{DMD}}.
+\end{align}
+\textbf{Note.} Trajectories are sampled from the model prior over paths; the
+variables along a path are distributed according to the model.
+
+\paragraph{SF+DMD = Reverse KL objective}
+The formulation of the DMD loss exactly mirrors the training method of self-forcing: at each training step, we randomly sample a transition state $(T_i \rightarrow T_{i-1})$ from a trajectory $\tau \sim \mathrm{Traj}(n,K)$, and if using the DMD loss, calculate the KL divergence $D_{\mathrm{KL}}\!\left(p_\theta(T_{i-1}\mid T_i)\,\big\|\,p_{\text{data}}(T_{i-1}\mid T_i)\right)$ for that transition. This Monte Carlo sampling over transitions provides an unbiased estimate of the full trajectory loss.
+
+
+
+\subsection*{DF vs.\ SF viewpoints}
+
+A convenient way to see Diffusion-Forcing (DF) and Self-Forcing (SF) is
+through the two KL directions:
+\begin{align}
+\text{DF:}\quad
+\min_\theta\;D_{\mathrm{KL}}\!\left(p_{\text{data}}\;\big\|\;p_\theta\right),
+\qquad
+\text{SF:}\quad
+\min_\theta\;D_{\mathrm{KL}}\!\left(p_\theta\;\big\|\;p_{\text{data}}\right).
+\end{align}
+Using KL divergence decomposition
+\begin{align}
+D_{\mathrm{KL}}\!\left(p_\theta\;\big\|\;p_{\text{data}}\right)
+= \,\mathbb{E}_{x\sim p_\theta}\!\left[\ln p_{\text{data}}(x)\right]
+- H\!\left(p_\theta\right),
+\label{eq:rkl-entropy}
+\end{align}
+we see that SF encourages \emph{entropy maximization} of $p_\theta$ while
+also minimizing the cross-entropy term $\mathbb{E}_{p_\theta}[\ln
+p_{\text{data}}(x)]$. This partly explains the mode-seeking behavior of the
+reverse KL.
+
+\paragraph{``Fixing'' SF by removing entropy.}
+If we wish to keep only the cross-entropy term and remove the entropy
+pressure in~\eqref{eq:rkl-entropy}, we can optimize
+\begin{align}
+\argmax_\theta\;\mathbb{E}_{x\sim p_\theta}\!\left[\ln p_{\text{data}}(x)\right]
+\;\;\equiv\;\;
+\argmin_\theta\;
+D_{\mathrm{KL}}\!\left(p_\theta\;\big\|\;p_{\text{data}}\right)
+- H\!\left(p_\theta\right).
+\end{align}
+This isolates the data-fitting term without explicitly encouraging high
+model entropy. In practice, model entropy is intractable, so has to be estimated.
+
 
 \end{document}
