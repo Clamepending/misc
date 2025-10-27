@@ -1,4 +1,5 @@
 \documentclass{article}
+\usepackage[margin=1in]{geometry}
 \usepackage{amsmath, amsfonts, amssymb}
 \usepackage{bm}
 
@@ -166,7 +167,7 @@ r(x) \;\neq\; \alpha\,p_{\text{data}}(x) + (1-\alpha)\,p_\theta(x),
 because $r$ is not built from two fixed shapes—it is the \emph{pushforward mixture} of $p_{\text{data}}$
 through the joint stochastic map $(x_0 \!\to\! x_t \!\to\! x)$,
 producing a distribution with structure that lies strictly between $p_{\text{data}}$ and $p_\theta$,
-but not on their linear span. Since integration is a linear operation, this means we can not write our loss as a linear combination of the forward and backward KL divergences
+but not on their linear span. Since integration is a linear operation, this means we cannot write our loss as a linear combination of the forward and backward KL divergences.
 
 
 \end{document}

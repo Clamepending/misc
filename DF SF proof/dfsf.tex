@@ -97,7 +97,7 @@ Or equivalently as a weighted sum over all possible trajectories:
 = \sum_{\tau \in \text{Traj}(2,K)} p(\tau) \sum_{T_i \in \tau} D_{KL}(q(T_{i-1} | T_i) || p(T_{i-1} | T_i))
 \end{align}
 
-If we instead write this as probaability distributions over atomic transitions marginalized over the distribution of trajectories, we get:
+If we instead write this as probability distributions over atomic transitions marginalized over the distribution of trajectories, we get:
 
 \begin{align}
 = \sum_{T_i \rightarrow T_{i-1} \in \text{Traj}(2,K)} P(T_i \rightarrow T_{i-1}) D_{KL}(q(T_{i-1} | T_i) || p(T_{i-1} | T_i))
@@ -105,7 +105,7 @@ If we instead write this as probaability distributions over atomic transitions m
 
 \section{Generalizing to the n-frame case}
 
-To generalize to the n-frame case, we jsut chnage 2 to n.
+To generalize to the n-frame case, we just change 2 to n.
 
 \begin{align}
 \sum_{T_i \in \text{Traj}(n,K)} P(T_i \rightarrow T_{i-1}) D_{KL}(q(T_{i-1} | T_i) || p(T_{i-1} | T_i))
@@ -227,10 +227,10 @@ Also, in an architecture like the Transformer, our state transitions decrease th
 
 TF is encapsulated in this framework too.
 
-Like above,TF weights should be a constant traversing the edge of the cube from frame 1 $\rightarrow$ frame 2 $\rightarrow$ ... denoising which is:
+Like above, TF weights should be a constant traversing the edge of the cube from frame 1 $\rightarrow$ frame 2 $\rightarrow$ ... denoising which is:
 
 \begin{align}
-\mathbb{I}\left( \left\{ X_1^0, X_2^0, \ldots, X_i^{K_i}, X_{i+1}^K, \ldots, X_n^K \right\} \rightarrow \left\{ X_1^0, X_2^0, \ldots, X_i^{K_i-1}, X_{i+1}^K, \ldots, X_n^{1K} \right\} \right)
+\mathbb{I}\left( \left\{ X_1^0, X_2^0, \ldots, X_i^{K_i}, X_{i+1}^K, \ldots, X_n^K \right\} \rightarrow \left\{ X_1^0, X_2^0, \ldots, X_i^{K_i-1}, X_{i+1}^K, \ldots, X_n^K \right\} \right)
 \end{align}
 
 i.e. pick any frame $i$, every frame to the left should be clean, every frame to the right should be full noise, and the transition should be denoising the $i$th frame by 1 noise level.
@@ -238,7 +238,7 @@ i.e. pick any frame $i$, every frame to the left should be clean, every frame to
 
 \section{Deriving the Self-Forcing Objective and Training Algorithm}
 
-Similarly, we can derive a more general view of self forcin with DMD by deriving the ELBO for the 2 frame case.
+Similarly, we can derive a more general view of self forcing with DMD by deriving the ELBO for the 2 frame case.
 
 
 Let's derive the self-forcing objective and training algorithm from the following:
