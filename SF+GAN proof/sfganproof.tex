@@ -1,0 +1,350 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{mathtools}
+\usepackage{bm}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\geometry{margin=1in}
+
+\title{Proof Sketch: SF+GAN Minimizes Expected Jensen--Shannon Divergence}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Objective}
+
+To prove that \textbf{SF+GAN} minimizes
+\begin{equation}
+    \mathbb{E}_{noise} 
+    \Big[ 
+    \operatorname{JSD}\big(p_{\text{data}}(x|t) \,\|\, p_{g}(x|t)\big)
+    \Big],
+\end{equation}
+we adapt the original GAN proof to the video domain.
+
+\section{Adapting the GAN Framework}
+
+Our training procedure for SF+GAN creates a minimax game between the generator $G$ and discriminator $D$:
+\begin{equation}
+\min_G \max_D V(G, D),
+\end{equation}
+where
+\begin{equation}
+V(G, D) = 
+\int_x p_{\text{data}}(x) \log D(x) \, dx 
++ 
+\int_z p_z(z) \log \big(1 - D(G(z))\big) \, dz.
+\end{equation}
+
+During training, we sample minibatches from both the noise and data distributions and perform gradient ascent/descent updates:
+\begin{align}
+\nabla_{\theta_D} \frac{1}{m} \sum_{i=1}^{m} 
+\big[ \log D(x^{(i)}) + \log (1 - D(G(z^{(i)}))) \big], \\
+\nabla_{\theta_G} \frac{1}{m} \sum_{i=1}^{m} 
+\log (1 - D(G(z^{(i)}))).
+\end{align}
+
+\section{Extension to Videos and Noise Levels}
+
+In SF+GAN, each $x$ corresponds not to an image but to a \textbf{video}:
+\begin{equation}
+x_{0:T} = (x_0, x_1, \dots, x_T),
+\end{equation}
+and we perform the minimax game over noise levels $k_{0:T} \sim p(k)$.
+
+Our sampling procedure is:
+\begin{align}
+z_{0:T}^{(i)} &\sim p_z, \quad \text{(noise)} \\
+x_{0:T}^{(i)} &\sim p_{\text{data}}, \quad \text{(real video)}.
+\end{align}
+
+For each batch, we randomly sample noise levels independently for real and generated videos:
+\begin{align}
+k_{0:T}^{(i), \text{real}} &\sim p(k), \\
+k_{0:T}^{(i), \text{fake}} &\sim p(k),
+\end{align}
+where each $k_{0:T} = (k_0, k_1, \dots, k_T)$ specifies the noise level for each frame.
+
+The generator $G$ produces \textbf{clean frames} from noise:
+\begin{equation}
+\tilde{x}_{0:T}^{(i)} = G(z_{0:T}^{(i)}),
+\end{equation}
+where $\tilde{x}_{0:T}^{(i)}$ represents the generated clean video.
+
+\subsection*{Forward Process Definition}
+
+We define the \textbf{forward process} $F(x_{0:T}, k_{0:T})$ as a noising operation that takes clean frames and adds noise according to the schedule $k_{0:T}$. For each frame $t \in \{0, \dots, T\}$, the forward process applies:
+\begin{equation}
+F(x_t, k_t) = \alpha_{k_t} x_t + \beta_{k_t} \epsilon_t, \quad \epsilon_t \sim \mathcal{N}(0, I),
+\end{equation}
+where $\alpha_{k_t}$ and $\beta_{k_t}$ are schedule-dependent coefficients that control the amount of noise added. More compactly, for a video $x_{0:T}$ and schedule $k_{0:T}$:
+\begin{equation}
+F(x_{0:T}, k_{0:T}) = \big( F(x_0, k_0), F(x_1, k_1), \dots, F(x_T, k_T) \big).
+\end{equation}
+
+During training, we apply the forward process to \textbf{both} real and generated videos using independently sampled noise schedules:
+\begin{align}
+x_{0:T}^{(i), \text{noisy}} &= F(x_{0:T}^{(i)}, k_{0:T}^{(i), \text{real}}), \\
+\tilde{x}_{0:T}^{(i), \text{noisy}} &= F(\tilde{x}_{0:T}^{(i)}, k_{0:T}^{(i), \text{fake}}) = F(G(z_{0:T}^{(i)}), k_{0:T}^{(i), \text{fake}}).
+\end{align}
+
+\section{Training Updates}
+
+We update the discriminator by ascending:
+\begin{align}
+\nabla_{\theta_D} \frac{1}{m} \sum_{i=1}^{m}
+\Big[ 
+\log D\big(F(x_{0:T}^{(i)}, k_{0:T}^{(i), \text{real}}); k_{0:T}^{(i), \text{real}}\big)
++ 
+\log \big(1 - D(F(G(z_{0:T}^{(i)}), k_{0:T}^{(i), \text{fake}}); k_{0:T}^{(i), \text{fake}})\big)
+\Big],
+\end{align}
+and update the generator by descending:
+\begin{align}
+\nabla_{\theta_G} \frac{1}{m} \sum_{i=1}^{m}
+\log \big(1 - D(F(G(z_{0:T}^{(i)}), k_{0:T}^{(i), \text{fake}}); k_{0:T}^{(i), \text{fake}})\big).
+\end{align}
+
+Note that the generator $G$ produces clean frames $\tilde{x}_{0:T}^{(i)} = G(z_{0:T}^{(i)})$, and then the forward process $F$ is applied independently to the real clean videos $x_{0:T}^{(i)}$ and the generated clean videos $\tilde{x}_{0:T}^{(i)}$ using their respective randomly sampled noise schedules.
+
+\section{Final Objective}
+
+Combining these components, the SF+GAN objective can be written as:
+\begin{equation}
+\begin{aligned}
+V(G, D) 
+&= 
+\mathbb{E}_{k_{0:T}^{\text{real}}, k_{0:T}^{\text{fake}} \sim p(k)} 
+\Bigg[
+\int_{x_{0:T}} 
+p_{\text{data}}(x_{0:T}) 
+\log D\big(F(x_{0:T}, k_{0:T}^{\text{real}}); k_{0:T}^{\text{real}}\big) 
+\, dx_{0:T} \\
+&\quad + 
+\int_{z_{0:T}} 
+p_z(z_{0:T}) 
+\log \big(1 - D(F(G(z_{0:T}), k_{0:T}^{\text{fake}}); k_{0:T}^{\text{fake}})\big) 
+\, dz_{0:T}
+\Bigg],
+\end{aligned}
+\end{equation}
+where $G(z_{0:T})$ produces clean generated videos, and the forward process $F$ is applied independently to real videos $x_{0:T}$ and generated videos $G(z_{0:T})$ using their respective independently sampled noise schedules $k_{0:T}^{\text{real}}$ and $k_{0:T}^{\text{fake}}$.
+
+\section{Deriving the Optimal Discriminator and JSD}
+
+To find the optimal discriminator and connect the objective to Jensen--Shannon divergence, we follow the derivation from the original GAN paper, adapted to our conditional setting.
+
+\subsection*{Step 1: Combining Integrals}
+
+First, we change variables in the second integral. Let $\tilde{x}_{0:T} = G(z_{0:T})$ be the generated clean video, and after applying the forward process, we have $\tilde{x}_{0:T}^{\text{noisy}} = F(\tilde{x}_{0:T}, k_{0:T}^{\text{fake}})$. Let $p_g(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{fake}})$ denote the distribution of noisy generated videos conditioned on the noise schedule.
+
+For a fixed noise schedule pair $(k_{0:T}^{\text{real}}, k_{0:T}^{\text{fake}})$, the objective becomes:
+\begin{equation}
+\begin{aligned}
+V(G, D; k_{0:T}^{\text{real}}, k_{0:T}^{\text{fake}})
+&= \int_{x_{0:T}} 
+p_{\text{data}}(x_{0:T}) 
+\log D\big(F(x_{0:T}, k_{0:T}^{\text{real}}); k_{0:T}^{\text{real}}\big) 
+\, dx_{0:T} \\
+&\quad + 
+\int_{z_{0:T}} 
+p_z(z_{0:T}) 
+\log \big(1 - D(F(G(z_{0:T}), k_{0:T}^{\text{fake}}); k_{0:T}^{\text{fake}})\big) 
+\, dz_{0:T}.
+\end{aligned}
+\end{equation}
+
+Changing variables in the second integral, we can rewrite this as:
+\begin{equation}
+\begin{aligned}
+V(G, D; k_{0:T}^{\text{real}}, k_{0:T}^{\text{fake}})
+&= \int_{x_{0:T}^{\text{noisy}}} 
+p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{real}}) 
+\log D(x_{0:T}^{\text{noisy}}; k_{0:T}^{\text{real}}) 
+\, dx_{0:T}^{\text{noisy}} \\
+&\quad + 
+\int_{x_{0:T}^{\text{noisy}}} 
+p_g(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{fake}}) 
+\log \big(1 - D(x_{0:T}^{\text{noisy}}; k_{0:T}^{\text{fake}})\big) 
+\, dx_{0:T}^{\text{noisy}},
+\end{aligned}
+\end{equation}
+where $p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{real}})$ is the distribution of noisy real videos after applying $F$ with schedule $k_{0:T}^{\text{real}}$, and similarly for $p_g$.
+
+Combining both terms under a single integral:
+\begin{equation}
+V(G, D; k_{0:T}^{\text{real}}, k_{0:T}^{\text{fake}})
+= \int_{x_{0:T}^{\text{noisy}}} 
+\Big[
+p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{real}}) 
+\log D(x_{0:T}^{\text{noisy}}; k_{0:T}^{\text{real}}) 
++ p_g(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{fake}}) 
+\log \big(1 - D(x_{0:T}^{\text{noisy}}; k_{0:T}^{\text{fake}})\big)
+\Big] 
+\, dx_{0:T}^{\text{noisy}}.
+\end{equation}
+
+\subsection*{Step 2: Finding the Optimal Discriminator}
+
+For any $(a, b) \in \mathbb{R}^2 \setminus \{(0,0)\}$, the function $y \mapsto a \log(y) + b \log(1-y)$ achieves its maximum in $[0,1]$ at $y = a/(a+b)$.
+
+Applying this to the integrand for each fixed $x_{0:T}^{\text{noisy}}$ and noise schedules, the optimal discriminator that maximizes $V(G, D; k_{0:T}^{\text{real}}, k_{0:T}^{\text{fake}})$ for a fixed generator $G$ is:
+\begin{equation}
+D_G^*(x_{0:T}^{\text{noisy}}; k_{0:T}^{\text{real}}, k_{0:T}^{\text{fake}}) = 
+\frac{p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{real}})}
+{p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{real}}) + p_g(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{fake}})}.
+\end{equation}
+
+Note that for the discriminator to be well-defined, we need to consider it conditioned on the noise schedule. Since noise schedules are sampled independently, we can write the optimal discriminator more generally as:
+\begin{equation}
+D_G^*(x_{0:T}^{\text{noisy}} | k_{0:T}) = 
+\frac{p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T})}
+{p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}) + p_g(x_{0:T}^{\text{noisy}} | k_{0:T})}.
+\end{equation}
+
+\subsection*{Step 3: Substituting the Optimal Discriminator}
+
+Now we define $C(G) = \max_D V(G, D)$ and substitute the optimal discriminator:
+\begin{equation}
+\begin{aligned}
+C(G) &= \mathbb{E}_{k_{0:T}^{\text{real}}, k_{0:T}^{\text{fake}} \sim p(k)}
+\Bigg[
+\int_{x_{0:T}^{\text{noisy}}} 
+p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{real}}) 
+\log D_G^*(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{real}}) 
+\, dx_{0:T}^{\text{noisy}} \\
+&\quad + 
+\int_{x_{0:T}^{\text{noisy}}} 
+p_g(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{fake}}) 
+\log \big(1 - D_G^*(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{fake}})\big) 
+\, dx_{0:T}^{\text{noisy}}
+\Bigg].
+\end{aligned}
+\end{equation}
+
+Substituting $D_G^*$:
+\begin{equation}
+\begin{aligned}
+C(G) &= \mathbb{E}_{k_{0:T}^{\text{real}}, k_{0:T}^{\text{fake}} \sim p(k)}
+\Bigg[
+\int_{x_{0:T}^{\text{noisy}}} 
+p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{real}}) 
+\log \frac{p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{real}})}
+{p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{real}}) + p_g(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{real}})} 
+\, dx_{0:T}^{\text{noisy}} \\
+&\quad + 
+\int_{x_{0:T}^{\text{noisy}}} 
+p_g(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{fake}}) 
+\log \frac{p_g(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{fake}})}
+{p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{fake}}) + p_g(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{fake}})} 
+\, dx_{0:T}^{\text{noisy}}
+\Bigg].
+\end{aligned}
+\end{equation}
+
+\subsection*{Step 4: Expressing as Sum of KL Divergences}
+
+To introduce KL divergence terms, we add and subtract $\log(1/2)$ in each integral:
+\begin{equation}
+\begin{aligned}
+C(G) &= \mathbb{E}_{k_{0:T} \sim p(k)}
+\Bigg[
+\int_{x_{0:T}^{\text{noisy}}} 
+p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}) 
+\log \frac{p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T})}
+{(p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}) + p_g(x_{0:T}^{\text{noisy}} | k_{0:T}))/2} 
+\, dx_{0:T}^{\text{noisy}} \\
+&\quad + 
+\int_{x_{0:T}^{\text{noisy}}} 
+p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}) 
+\log(1/2) 
+\, dx_{0:T}^{\text{noisy}} \\
+&\quad + 
+\int_{x_{0:T}^{\text{noisy}}} 
+p_g(x_{0:T}^{\text{noisy}} | k_{0:T}) 
+\log \frac{p_g(x_{0:T}^{\text{noisy}} | k_{0:T})}
+{(p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}) + p_g(x_{0:T}^{\text{noisy}} | k_{0:T}))/2} 
+\, dx_{0:T}^{\text{noisy}} \\
+&\quad + 
+\int_{x_{0:T}^{\text{noisy}}} 
+p_g(x_{0:T}^{\text{noisy}} | k_{0:T}) 
+\log(1/2) 
+\, dx_{0:T}^{\text{noisy}}
+\Bigg],
+\end{aligned}
+\end{equation}
+where we have used the fact that $k_{0:T}^{\text{real}}$ and $k_{0:T}^{\text{fake}}$ are independently sampled from the same distribution $p(k)$.
+
+Recognizing the Kullback--Leibler divergence $\operatorname{KL}(P \| Q) = \int P(x) \log(P(x)/Q(x)) \, dx$, we obtain:
+\begin{equation}
+\begin{aligned}
+C(G) &= \mathbb{E}_{k_{0:T} \sim p(k)}
+\Bigg[
+\operatorname{KL}\left(p_{\text{data}}(\cdot | k_{0:T}) \,\Big\|\, \frac{p_{\text{data}}(\cdot | k_{0:T}) + p_g(\cdot | k_{0:T})}{2}\right) \\
+&\quad + \log(1/2) \\
+&\quad + \operatorname{KL}\left(p_g(\cdot | k_{0:T}) \,\Big\|\, \frac{p_{\text{data}}(\cdot | k_{0:T}) + p_g(\cdot | k_{0:T})}{2}\right) \\
+&\quad + \log(1/2)
+\Bigg].
+\end{aligned}
+\end{equation}
+
+\subsection*{Step 5: Arriving at Jensen--Shannon Divergence}
+
+Combining the terms:
+\begin{equation}
+\begin{aligned}
+C(G) &= -2 \log 2 + \mathbb{E}_{k_{0:T} \sim p(k)}
+\Bigg[
+\operatorname{KL}\left(p_{\text{data}}(\cdot | k_{0:T}) \,\Big\|\, \frac{p_{\text{data}}(\cdot | k_{0:T}) + p_g(\cdot | k_{0:T})}{2}\right) \\
+&\quad + \operatorname{KL}\left(p_g(\cdot | k_{0:T}) \,\Big\|\, \frac{p_{\text{data}}(\cdot | k_{0:T}) + p_g(\cdot | k_{0:T})}{2}\right)
+\Bigg].
+\end{aligned}
+\end{equation}
+
+The Jensen--Shannon divergence is defined as:
+\begin{equation}
+\operatorname{JSD}(P \| Q) = \frac{1}{2} \operatorname{KL}\left(P \,\Big\|\, \frac{P + Q}{2}\right) + \frac{1}{2} \operatorname{KL}\left(Q \,\Big\|\, \frac{P + Q}{2}\right),
+\end{equation}
+so the sum of the two KL terms equals $2 \cdot \operatorname{JSD}(p_{\text{data}}(\cdot | k_{0:T}) \| p_g(\cdot | k_{0:T}))$.
+
+Therefore, we have:
+\begin{equation}
+C(G) = -2 \log 2 + 2 \, \mathbb{E}_{k_{0:T} \sim p(k)} 
+\Big[ 
+\operatorname{JSD}\big(p_{\text{data}}(\cdot | k_{0:T}) \,\|\, p_{g}(\cdot | k_{0:T})\big)
+\Big].
+\end{equation}
+
+At optimal discriminator $D^*(x|k)$, we recover that
+\begin{equation}
+V(G, D^*) = -2 \log 2 + 2 \, \mathbb{E}_{k_{0:T} \sim p(k)} 
+\Big[ 
+\operatorname{JSD}\big(p_{\text{data}}(x|t) \,\|\, p_{g}(x|t)\big)
+\Big].
+\end{equation}
+Since $-2\log 2$ is a constant, we have
+\begin{equation}
+V(G, D^*) \propto \mathbb{E}_{k_{0:T} \sim p(k)} 
+\Big[ 
+\operatorname{JSD}\big(p_{\text{data}}(x|t) \,\|\, p_{g}(x|t)\big)
+\Big],
+\end{equation}
+so minimizing $V(G, D^*)$ is equivalent to minimizing
+\begin{equation}
+\mathbb{E}_{k_{0:T} \sim p(k)} 
+\Big[ 
+\operatorname{JSD}\big(p_{\text{data}}(x|t) \,\|\, p_{g}(x|t)\big)
+\Big].
+\end{equation}
+This shows that the SF+GAN training minimizes the expected Jensen--Shannon divergence between real and generated conditional distributions.
+
+\section{Conclusion}
+
+Thus, by extending the original GAN framework to operate over time-conditioned video distributions and noise levels $k_{0:T}$, we see that the SF+GAN formulation is equivalent to minimizing an \emph{expected conditional Jensen--Shannon divergence} similar to the GAN objective derived in the Diffusion-GAN paper.
+
+\end{document}
