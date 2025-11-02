@@ -4,8 +4,7 @@
 \usepackage{bm}
 \usepackage{graphicx}
 \usepackage{geometry}
-\usepackage{algorithm}
-\usepackage{algpseudocode}
+\usepackage[ruled,vlined]{algorithm2e}
 \geometry{margin=1in}
 
 \title{Proof Sketch: SF+GAN Minimizes Expected Jensen--Shannon Divergence}
@@ -95,7 +94,7 @@ x_{0:T}^{(i), \text{noisy}} &= F(x_{0:T}^{(i)}, k_{0:T}^{(i), \text{real}}), \\
 
 \section{Training Updates}
 
-We update the discriminator by ascending:
+The SF+GAN training procedure is summarized in Algorithm~\ref{alg:sfgan}. We update the discriminator by ascending:
 \begin{align}
 \nabla_{\theta_D} \frac{1}{m} \sum_{i=1}^{m}
 \Big[ 
@@ -109,6 +108,27 @@ and update the generator by descending:
 \nabla_{\theta_G} \frac{1}{m} \sum_{i=1}^{m}
 \log \big(1 - D(F(G(z_{0:T}^{(i)}), k_{0:T}^{(i), \text{fake}}); k_{0:T}^{(i), \text{fake}})\big).
 \end{align}
+
+\begin{algorithm}[t]
+\caption{SF+GAN Training for Videos}
+\label{alg:sfgan}
+\KwIn{Number of training iterations $N$, batch size $m$, noise distribution $p_z$, data distribution $p_{\text{data}}$, noise schedule distribution $p(k)$, forward process $F$, generator $G$, discriminator $D$}
+\KwOut{Trained generator $G$}
+Initialize generator $G$ and discriminator $D$ with random weights\;
+\For{training iteration $n = 1, 2, \ldots, N$}{
+    Sample minibatch of noise: $\{z_{0:T}^{(i)}\}_{i=1}^{m} \sim p_z$\;
+    Sample minibatch of real videos: $\{x_{0:T}^{(i)}\}_{i=1}^{m} \sim p_{\text{data}}$\;
+    Sample noise schedules for real videos: $\{k_{0:T}^{(i), \text{real}}\}_{i=1}^{m} \sim p(k)$\;
+    Sample noise schedules for fake videos: $\{k_{0:T}^{(i), \text{fake}}\}_{i=1}^{m} \sim p(k)$\;
+    Generate clean videos: $\tilde{x}_{0:T}^{(i)} = G(z_{0:T}^{(i)})$ for $i = 1, \ldots, m$\;
+    Apply forward process to real videos: $x_{0:T}^{(i), \text{noisy}} = F(x_{0:T}^{(i)}, k_{0:T}^{(i), \text{real}})$ for $i = 1, \ldots, m$\;
+    Apply forward process to generated videos: $\tilde{x}_{0:T}^{(i), \text{noisy}} = F(\tilde{x}_{0:T}^{(i)}, k_{0:T}^{(i), \text{fake}})$ for $i = 1, \ldots, m$\;
+    Update discriminator by ascending gradient:\;
+    $\nabla_{\theta_D} \frac{1}{m} \sum_{i=1}^{m} \Big[ \log D(x_{0:T}^{(i), \text{noisy}}; k_{0:T}^{(i), \text{real}}) + \log (1 - D(\tilde{x}_{0:T}^{(i), \text{noisy}}; k_{0:T}^{(i), \text{fake}})) \Big]$\;
+    Update generator by descending gradient:\;
+    $\nabla_{\theta_G} \frac{1}{m} \sum_{i=1}^{m} \log (1 - D(\tilde{x}_{0:T}^{(i), \text{noisy}}; k_{0:T}^{(i), \text{fake}}))$\;
+}
+\end{algorithm}
 
 Note that the generator $G$ produces clean frames $\tilde{x}_{0:T}^{(i)} = G(z_{0:T}^{(i)})$, and then the forward process $F$ is applied independently to the real clean videos $x_{0:T}^{(i)}$ and the generated clean videos $\tilde{x}_{0:T}^{(i)}$ using their respective randomly sampled noise schedules.
 
