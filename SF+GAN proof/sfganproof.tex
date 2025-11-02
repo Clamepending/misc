@@ -7,7 +7,7 @@
 \usepackage[ruled,vlined]{algorithm2e}
 \geometry{margin=1in}
 
-\title{Proof Sketch: SF+GAN Minimizes Expected Jensen--Shannon Divergence}
+\title{proof: SF+GAN Minimizes Expected Jensen--Shannon Divergence}
 \author{}
 \date{}
 
@@ -112,21 +112,17 @@ and update the generator by descending:
 \begin{algorithm}[t]
 \caption{SF+GAN Training for Videos}
 \label{alg:sfgan}
-\KwIn{Number of training iterations $N$, batch size $m$, noise distribution $p_z$, data distribution $p_{\text{data}}$, noise schedule distribution $p(k)$, forward process $F$, generator $G$, discriminator $D$}
+\KwIn{Iterations $N$, batch size $m$, $p_z$, $p_{\text{data}}$, $p(k)$, forward process $F$, generator $G$, discriminator $D$}
 \KwOut{Trained generator $G$}
-Initialize generator $G$ and discriminator $D$ with random weights\;
-\For{training iteration $n = 1, 2, \ldots, N$}{
-    Sample minibatch of noise: $\{z_{0:T}^{(i)}\}_{i=1}^{m} \sim p_z$\;
-    Sample minibatch of real videos: $\{x_{0:T}^{(i)}\}_{i=1}^{m} \sim p_{\text{data}}$\;
-    Sample noise schedules for real videos: $\{k_{0:T}^{(i), \text{real}}\}_{i=1}^{m} \sim p(k)$\;
-    Sample noise schedules for fake videos: $\{k_{0:T}^{(i), \text{fake}}\}_{i=1}^{m} \sim p(k)$\;
-    Generate clean videos: $\tilde{x}_{0:T}^{(i)} = G(z_{0:T}^{(i)})$ for $i = 1, \ldots, m$\;
-    Apply forward process to real videos: $x_{0:T}^{(i), \text{noisy}} = F(x_{0:T}^{(i)}, k_{0:T}^{(i), \text{real}})$ for $i = 1, \ldots, m$\;
-    Apply forward process to generated videos: $\tilde{x}_{0:T}^{(i), \text{noisy}} = F(\tilde{x}_{0:T}^{(i)}, k_{0:T}^{(i), \text{fake}})$ for $i = 1, \ldots, m$\;
-    Update discriminator by ascending gradient:\;
-    $\nabla_{\theta_D} \frac{1}{m} \sum_{i=1}^{m} \Big[ \log D(x_{0:T}^{(i), \text{noisy}}; k_{0:T}^{(i), \text{real}}) + \log (1 - D(\tilde{x}_{0:T}^{(i), \text{noisy}}; k_{0:T}^{(i), \text{fake}})) \Big]$\;
-    Update generator by descending gradient:\;
-    $\nabla_{\theta_G} \frac{1}{m} \sum_{i=1}^{m} \log (1 - D(\tilde{x}_{0:T}^{(i), \text{noisy}}; k_{0:T}^{(i), \text{fake}}))$\;
+Initialize $G$ and $D$ randomly\;
+\For{$n = 1, \ldots, N$}{
+    Sample $\{z_{0:T}^{(i)}\}_{i=1}^{m} \sim p_z$, $\{x_{0:T}^{(i)}\}_{i=1}^{m} \sim p_{\text{data}}$\;
+    Sample noise schedules: $\{k_{0:T}^{(i), \text{real}}\}_{i=1}^{m}, \{k_{0:T}^{(i), \text{fake}}\}_{i=1}^{m} \sim p(k)$\;
+    Generate $\tilde{x}_{0:T}^{(i)} = G(z_{0:T}^{(i)})$, apply forward process:
+    $x_{0:T}^{(i), \text{noisy}} = F(x_{0:T}^{(i)}, k_{0:T}^{(i), \text{real}})$, 
+    $\tilde{x}_{0:T}^{(i), \text{noisy}} = F(\tilde{x}_{0:T}^{(i)}, k_{0:T}^{(i), \text{fake}})$\;
+    Update $D$: $\nabla_{\theta_D} \frac{1}{m} \sum_{i=1}^{m} \big[ \log D(x_{0:T}^{(i), \text{noisy}}; k_{0:T}^{(i), \text{real}}) + \log (1 - D(\tilde{x}_{0:T}^{(i), \text{noisy}}; k_{0:T}^{(i), \text{fake}})) \big]$\;
+    Update $G$: $\nabla_{\theta_G} \frac{1}{m} \sum_{i=1}^{m} \log (1 - D(\tilde{x}_{0:T}^{(i), \text{noisy}}; k_{0:T}^{(i), \text{fake}}))$\;
 }
 \end{algorithm}
 
@@ -198,15 +194,17 @@ where $p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{real}})$ is the d
 
 Combining both terms under a single integral:
 \begin{equation}
+\begin{aligned}
 V(G, D; k_{0:T}^{\text{real}}, k_{0:T}^{\text{fake}})
-= \int_{x_{0:T}^{\text{noisy}}} 
+&= \int_{x_{0:T}^{\text{noisy}}} 
 \Big[
 p_{\text{data}}(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{real}}) 
-\log D(x_{0:T}^{\text{noisy}}; k_{0:T}^{\text{real}}) 
-+ p_g(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{fake}}) 
+\log D(x_{0:T}^{\text{noisy}}; k_{0:T}^{\text{real}}) \\
+&\quad + p_g(x_{0:T}^{\text{noisy}} | k_{0:T}^{\text{fake}}) 
 \log \big(1 - D(x_{0:T}^{\text{noisy}}; k_{0:T}^{\text{fake}})\big)
 \Big] 
 \, dx_{0:T}^{\text{noisy}}.
+\end{aligned}
 \end{equation}
 
 \subsection*{Step 2: Finding the Optimal Discriminator}
