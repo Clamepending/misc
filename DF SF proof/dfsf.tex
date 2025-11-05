@@ -375,22 +375,8 @@ D_{\mathrm{KL}}\!\left(p_\theta\;\big\|\;p_{\text{data}}\right)
 \label{eq:rkl-entropy}
 \end{align}
 we see that SF encourages \emph{entropy maximization} of $p_\theta$ while
-also Maximizing the cross-entropy term $\mathbb{E}_{p_\theta}[\ln
+also maximizing the cross-entropy term $\mathbb{E}_{p_\theta}[\ln
 p_{\text{data}}(x)]$. This partly explains the mode-seeking behavior of the
 reverse KL, as the cross-entropy term wants to collapse onto the most likely datapoint, while the entropy term is compensating to try to spread the distribution out.
-
-\paragraph{``Fixing'' SF by removing entropy.}
-If we wish to keep only the cross-entropy term and remove the entropy
-pressure in~\eqref{eq:rkl-entropy}, we can optimize
-\begin{align}
-\argmax_\theta\;\mathbb{E}_{x\sim p_\theta}\!\left[\ln p_{\text{data}}(x)\right]
-\;\;\equiv\;\;
-\argmin_\theta\;
-D_{\mathrm{KL}}\!\left(p_\theta\;\big\|\;p_{\text{data}}\right)
-- H\!\left(p_\theta\right).
-\end{align}
-This isolates the data-fitting term without explicitly encouraging high
-model entropy. In practice, model entropy is intractable, so has to be estimated.
-
 
 \end{document}
