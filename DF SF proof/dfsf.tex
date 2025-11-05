@@ -370,14 +370,14 @@ through the two KL directions:
 Using KL divergence decomposition
 \begin{align}
 D_{\mathrm{KL}}\!\left(p_\theta\;\big\|\;p_{\text{data}}\right)
-= \,\mathbb{E}_{x\sim p_\theta}\!\left[\ln p_{\text{data}}(x)\right]
+= -\,\mathbb{E}_{x\sim p_\theta}\!\left[\ln p_{\text{data}}(x)\right]
 - H\!\left(p_\theta\right),
 \label{eq:rkl-entropy}
 \end{align}
 we see that SF encourages \emph{entropy maximization} of $p_\theta$ while
-also minimizing the cross-entropy term $\mathbb{E}_{p_\theta}[\ln
+also Maximizing the cross-entropy term $\mathbb{E}_{p_\theta}[\ln
 p_{\text{data}}(x)]$. This partly explains the mode-seeking behavior of the
-reverse KL.
+reverse KL, as the cross-entropy term wants to collapse onto the most likely datapoint, while the entropy term is compensating to try to spread the distribution out.
 
 \paragraph{``Fixing'' SF by removing entropy.}
 If we wish to keep only the cross-entropy term and remove the entropy

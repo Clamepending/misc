@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1762316170.70321 "/Users/mark/Desktop/projects/misc/DF SF proof/dfsf.tex" "dfsf.pdf" "dfsf" 1762316171.32088 0
-  "/Users/mark/Desktop/projects/misc/DF SF proof/dfsf.tex" 1762316170.51322 16522 04f1cbef682f666b0416a1991f61ee4f ""
+["pdflatex"] 1762318112.68743 "/Users/mark/Desktop/projects/misc/DF SF proof/dfsf.tex" "dfsf.pdf" "dfsf" 1762318113.32183 0
+  "/Users/mark/Desktop/projects/misc/DF SF proof/dfsf.tex" 1762318112.47722 16677 7d4f5a8eff2382f4525ab668ecd4f9a2 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
   "/usr/local/texlive/2024/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm" 1246382020 988 bdf658c3bfc2d96d3c8b02cfc1c94c20 ""
@@ -133,8 +133,8 @@
   "/usr/local/texlive/2024/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1726957187.51543 5467645 128b85b7cde5f5edc5cb7f1dd7ff8736 ""
   "/usr/local/texlive/2024/texmf-var/web2c/pdftex/pdflatex.fmt" 1726957166 8221424 670249e81c891beb02478f939016eab6 ""
   "/usr/local/texlive/2024/texmf.cnf" 1710266656 577 e590dabc9e28c5b61546e15f63eebcdf ""
-  "dfsf.aux" 1762316171.26244 1130 b50d202202bde1a4e71fd159cd7e8825 "pdflatex"
-  "dfsf.tex" 1762316170.51322 16522 04f1cbef682f666b0416a1991f61ee4f ""
+  "dfsf.aux" 1762318113.26232 1130 b50d202202bde1a4e71fd159cd7e8825 "pdflatex"
+  "dfsf.tex" 1762318112.47722 16677 7d4f5a8eff2382f4525ab668ecd4f9a2 ""
   (generated)
   "dfsf.aux"
   "dfsf.log"
